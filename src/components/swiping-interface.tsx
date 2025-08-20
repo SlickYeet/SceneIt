@@ -47,6 +47,15 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [likedMovies, setLikedMovies] = useState<number[]>([])
   const [newMatches, setNewMatches] = useState<number[]>([])
+  const [isDragging, setIsDragging] = useState<boolean>(false)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  })
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  })
 
   const [userId] = useState(
     () =>
@@ -83,6 +92,8 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
       } catch (error) {
         console.error("Failed to fetch movies, using mock data:", error)
         setMovies([])
+      } finally {
+        setIsLoading(false)
       }
     }
     fetchMovies()
@@ -119,10 +130,132 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
       setSwipeDirection(null)
       setIsAnimating(false)
       setShowDetails(false)
+      setDragOffset({ x: 0, y: 0 })
     }, 300)
   }
 
-  if (!isLoading) {
+  function handleStart(clientX: number, clientY: number) {
+    if (isAnimating) return
+    setIsDragging(true)
+    setDragStart({ x: clientX, y: clientY })
+    setDragOffset({ x: 0, y: 0 })
+  }
+
+  function handleMove(clientX: number, clientY: number) {
+    if (!isDragging || isAnimating) return
+
+    const deltaX = clientX - dragStart.x
+    const deltaY = clientY - dragStart.y
+
+    setDragOffset({ x: deltaX, y: deltaY })
+  }
+
+  function handleEnd() {
+    if (!isDragging || isAnimating) return
+
+    setIsDragging(false)
+
+    const threshold = 100
+    const absX = Math.abs(dragOffset.x)
+
+    if (absX > threshold) {
+      const direction = dragOffset.x > 0 ? "right" : "left"
+      handleSwipe(direction)
+    } else {
+      setDragOffset({ x: 0, y: 0 })
+    }
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    e.preventDefault()
+    handleStart(e.clientX, e.clientY)
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    const touch = e.touches[0]
+    handleStart(touch.clientX, touch.clientY)
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    const touch = e.touches[0]
+    handleMove(touch.clientX, touch.clientY)
+  }
+
+  function handleTouchEnd() {
+    handleEnd()
+  }
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    function handleGlobalMouseMove(e: MouseEvent) {
+      handleMove(e.clientX, e.clientY)
+    }
+
+    function handleGlobalMouseUp() {
+      handleEnd()
+    }
+
+    document.addEventListener("mousemove", handleGlobalMouseMove)
+    document.addEventListener("mouseup", handleGlobalMouseUp)
+
+    return () => {
+      document.removeEventListener("mousemove", handleGlobalMouseMove)
+      document.removeEventListener("mouseup", handleGlobalMouseUp)
+    }
+  }, [isDragging, dragStart, dragOffset])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (isAnimating) return
+
+      if (e.key === "ArrowLeft") {
+        e.preventDefault()
+        handleSwipe("left")
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault()
+        handleSwipe("right")
+      } else if (e.key === "ArrowUp" || e.key === " ") {
+        e.preventDefault()
+        setShowDetails(!showDetails)
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [isAnimating, showDetails])
+
+  function getCardStyle() {
+    if (swipeDirection === "left") {
+      return {
+        transform: "translateX(-100%) rotate(-12deg)",
+        opacity: 0,
+      }
+    }
+
+    if (swipeDirection === "right") {
+      return {
+        transform: "translateX(100%) rotate(12deg)",
+        opacity: 0,
+      }
+    }
+
+    if (isDragging) {
+      const rotation = dragOffset.x * 0.1
+      const opacity = Math.max(0.5, 1 - Math.abs(dragOffset.x) / 300)
+      return {
+        transform: `translateX(${dragOffset.x}px) rotate(${rotation}deg)`,
+        opacity,
+      }
+    }
+
+    return {
+      transform: "translateX(0px) rotate(0deg)",
+      opacity: 1,
+    }
+  }
+
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="space-y-4 text-center">
@@ -206,14 +339,15 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
         <div className="relative h-[600px]">
           <Card
             ref={cardRef}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             className={cn(
-              "absolute inset-0 overflow-hidden py-0 transition-transform duration-300",
-              swipeDirection === "left"
-                ? "-translate-x-full rotate-12 opacity-0"
-                : swipeDirection === "right"
-                  ? "translate-x-full rotate-12 opacity-0"
-                  : "",
+              "absolute inset-0 cursor-grab overflow-hidden py-0 transition-transform duration-300 select-none",
+              isDragging && "cursor-grabbing transition-none",
             )}
+            style={getCardStyle()}
           >
             <div className="relative h-full">
               <Image
@@ -289,6 +423,22 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
                   </div>
                 </div>
               )}
+
+              {/* Show drag indicators while dragging */}
+              {isDragging && dragOffset.x < -50 && (
+                <div className="bg-destructive/20 absolute inset-0 flex items-center justify-center">
+                  <div className="bg-destructive animate-pulse rounded-full p-4">
+                    <X className="size-8 text-white" />
+                  </div>
+                </div>
+              )}
+              {isDragging && dragOffset.x > 50 && (
+                <div className="bg-primary/20 absolute inset-0 flex items-center justify-center">
+                  <div className="bg-primary animate-pulse rounded-full p-4">
+                    <Heart className="size-8 text-white" />
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -348,8 +498,8 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
         )}
 
         <div className="text-muted-foreground space-y-1 text-center text-sm">
-          <p>Swipe right to like, left to pass</p>
-          <p className="text-xs">Use arrow keys or tap buttons</p>
+          <p>Swipe or drag cards • Use arrow keys • Tap buttons</p>
+          <p className="text-xs">← Pass • → Like • ↑ Info</p>
           {user?.isGuest && (
             <p className="text-destructive text-xs">
               Guest mode: Preferences won&apos;t be saved
