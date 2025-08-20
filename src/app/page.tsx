@@ -1,7 +1,10 @@
+import { SwipingInterface } from "@/components/swiping-interface"
+
 export default function HomePage() {
-  return (
-    <div>
-      <h1>HomePage</h1>
-    </div>
-  )
+  const preferences = {
+    contentType: ["movie", "tv"],
+    genres: ["Action", "Comedy"],
+  }
+
+  return <SwipingInterface preferences={preferences} roomId="123" />
 }
