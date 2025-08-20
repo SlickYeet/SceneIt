@@ -44,6 +44,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     null,
   )
   const [isAnimating, setIsAnimating] = useState<boolean>(false)
+  const [isNewCard, setIsNewCard] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [likedMovies, setLikedMovies] = useState<number[]>([])
   const [newMatches, setNewMatches] = useState<number[]>([])
@@ -128,9 +129,14 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % movies.length)
       setSwipeDirection(null)
-      setIsAnimating(false)
+      setIsNewCard(true)
       setShowDetails(false)
       setDragOffset({ x: 0, y: 0 })
+
+      setTimeout(() => {
+        setIsNewCard(false)
+        setIsAnimating(false)
+      }, 300)
     }, 300)
   }
 
@@ -203,7 +209,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
       document.removeEventListener("mousemove", handleGlobalMouseMove)
       document.removeEventListener("mouseup", handleGlobalMouseUp)
     }
-  }, [isDragging, dragStart, dragOffset])
+  }, [isDragging, dragStart, dragOffset, handleEnd, handleMove])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -223,7 +229,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [isAnimating, showDetails])
+  }, [isAnimating, showDetails, handleSwipe])
 
   function getCardStyle() {
     if (swipeDirection === "left") {
@@ -240,6 +246,13 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
       }
     }
 
+    if (isNewCard) {
+      return {
+        transform: "translateY(20px)",
+        opacity: 0,
+      }
+    }
+
     if (isDragging) {
       const rotation = dragOffset.x * 0.1
       const opacity = Math.max(0.5, 1 - Math.abs(dragOffset.x) / 300)
@@ -250,7 +263,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     }
 
     return {
-      transform: "translateX(0px) rotate(0deg)",
+      transform: "translateX(0px) translateY(0px) rotate(0deg)",
       opacity: 1,
     }
   }
@@ -290,7 +303,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   }
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen overflow-hidden p-4">
       <div className="mx-auto max-w-sm space-y-4 py-4">
         <div className="flex items-center justify-between">
           <h1 className="font-heading text-xl font-bold">SceneIt</h1>
@@ -343,11 +356,12 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className={cn(
-              "absolute inset-0 cursor-grab overflow-hidden py-0 transition-transform duration-300 select-none",
-              isDragging && "cursor-grabbing transition-none",
-            )}
             style={getCardStyle()}
+            className={cn(
+              "absolute inset-0 cursor-grab overflow-hidden py-0 transition-all duration-200 select-none",
+              isDragging && "cursor-grabbing transition-none",
+              isNewCard && "transition-all ease-out",
+            )}
           >
             <div className="relative h-full">
               <Image
@@ -499,7 +513,6 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
 
         <div className="text-muted-foreground space-y-1 text-center text-sm">
           <p>Swipe or drag cards • Use arrow keys • Tap buttons</p>
-          <p className="text-xs">← Pass • → Like • ↑ Info</p>
           {user?.isGuest && (
             <p className="text-destructive text-xs">
               Guest mode: Preferences won&apos;t be saved
@@ -509,10 +522,10 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
 
         {likedMovies.length > 0 && (
           <div className="text-muted-foreground text-center text-xs">
-            {likedMovies.length} movies liked
+            {likedMovies.length} movies liked{" "}
             {roomId && newMatches.length > 0 && (
               <>
-                <Dot className="inline" />
+                •{" "}
                 <span className="text-primary">
                   {newMatches.length} matches found!
                 </span>
