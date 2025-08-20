@@ -69,6 +69,7 @@ class TMDBService {
     this.apiKey = env.NEXT_PUBLIC_TMDB_API_KEY
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async fetchFromTMDB(endpoint: string): Promise<any> {
     const separator = endpoint.includes("?") ? "&" : "?"
     const url = `${TMDB_BASE_URL}${endpoint}${separator}api_key=${this.apiKey}`
@@ -180,6 +181,7 @@ class TMDBService {
     return genreNames
       .map((name) => {
         const entry = genreEntries.find(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           ([_, genreName]) => genreName.toLowerCase() === name.toLowerCase(),
         )
         return entry ? Number.parseInt(entry[0]) : null

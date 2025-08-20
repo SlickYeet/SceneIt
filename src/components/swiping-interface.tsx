@@ -194,7 +194,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             <CardContent className="p-4 text-center">
               <div className="text-primary flex items-center justify-center gap-2">
                 <Heart className="size-5 fill-current" />
-                <span className="font-semibold">It's a Match!</span>
+                <span className="font-semibold">It&&apos;s a Match!</span>
               </div>
               <p className="text-primary/80 text-sm">
                 You and your friends both love this {currentMovie?.type}!
@@ -352,7 +352,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
           <p className="text-xs">Use arrow keys or tap buttons</p>
           {user?.isGuest && (
             <p className="text-destructive text-xs">
-              Guest mode: Preferences won't be saved
+              Guest mode: Preferences won&apos;t be saved
             </p>
           )}
         </div>
