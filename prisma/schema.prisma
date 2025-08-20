@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
     provider = "prisma-client-js"
 }
@@ -8,19 +5,6 @@ generator client {
 datasource db {
     provider = "postgresql"
     url      = env("DATABASE_URL")
-}
-
-model Post {
-    id   String @id @default(cuid())
-    name String
-
-    createdBy   User   @relation(fields: [createdById], references: [id])
-    createdById String
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([name])
 }
 
 model User {
@@ -33,7 +17,6 @@ model User {
     updatedAt     DateTime
     sessions      Session[]
     accounts      Account[]
-    Post          Post[]
 
     @@unique([email])
     @@map("user")
