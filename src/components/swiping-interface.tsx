@@ -44,7 +44,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   )
   const [isAnimating, setIsAnimating] = useState<boolean>(false)
   const [isNewCard, setIsNewCard] = useState<boolean>(false)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   const [likedMovies, setLikedMovies] = useState<number[]>([])
   const [newMatches, setNewMatches] = useState<number[]>([])
   const [isDragging, setIsDragging] = useState<boolean>(false)
@@ -287,7 +287,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     )
   }
 
-  if (!currentMovie) {
+  if (!currentMovie && !isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="space-y-4 text-center">
