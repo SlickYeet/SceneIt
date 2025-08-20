@@ -78,7 +78,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     )
   }
 
-  if (currentMovie) {
+  if (!currentMovie) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="space-y-4 text-center">
