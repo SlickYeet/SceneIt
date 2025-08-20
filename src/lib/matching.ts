@@ -1,11 +1,10 @@
+import { type Preferences } from "@/hooks/use-preferences"
+
 export interface UserSession {
   id: string
   name: string
   likedMovies: number[]
-  preferences: {
-    contentType: string[]
-    genres: string[]
-  }
+  preferences: Preferences
   createdAt: Date
 }
 
@@ -14,16 +13,42 @@ export interface Match {
   users: string[]
   matchedAt: Date
 }
+
 export interface Room {
   id: string
   name: string
   users: UserSession[]
   matches: Match[]
+  isActive: boolean
+  createdAt: Date
 }
 
 class MatchingService {
   private rooms: Map<string, Room> = new Map()
   private userSession: Map<string, UserSession> = new Map()
+
+  generateRoomCode(): string {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    let result = ""
+    for (let i = 0; i < 6; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  createRoom(roomName: string): Room {
+    const roomId = this.generateRoomCode()
+    const room: Room = {
+      id: roomId,
+      name: roomName,
+      users: [],
+      matches: [],
+      createdAt: new Date(),
+      isActive: true,
+    }
+    this.rooms.set(roomId, room)
+    return room
+  }
 
   addLikedMovie(userId: string, movieId: number): Match[] {
     const user = this.userSession.get(userId)
@@ -67,6 +92,48 @@ class MatchingService {
     })
 
     return newMatches
+  }
+
+  getRoomMatches(roomId: string): Match[] {
+    const room = this.rooms.get(roomId)
+    return room?.matches || []
+  }
+
+  getUserMatches(userId: string): { room: Room; matches: Match[] }[] {
+    const userRooms = Array.from(this.rooms.values()).filter((room) =>
+      room.users.some((u) => u.id === userId),
+    )
+
+    return userRooms
+      .map((room) => ({
+        room,
+        matches: room.matches.filter((match) => match.users.includes(userId)),
+      }))
+      .filter((result) => result.matches.length > 0)
+  }
+
+  leaveRoom(roomId: string, userId: string): boolean {
+    const room = this.rooms.get(roomId)
+    if (!room) return false
+
+    room.users = room.users.filter((u) => u.id !== userId)
+
+    // If room is empty, mark as inactive
+    if (room.users.length === 0) {
+      room.isActive = false
+    }
+
+    return true
+  }
+
+  cleanupOldRooms(maxAgeHours = 24): void {
+    const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000)
+
+    for (const [roomId, room] of this.rooms.entries()) {
+      if (!room.isActive && room.createdAt < cutoffTime) {
+        this.rooms.delete(roomId)
+      }
+    }
   }
 }
 

@@ -16,16 +16,13 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { usePreferences } from "@/hooks/use-preferences"
 import { matchingService } from "@/lib/matching"
 import { tmdbService, type Movie } from "@/lib/tmdb"
 import { cn } from "@/lib/utils"
 import type { User } from "@/type"
 
 interface SwipingInterfaceProps {
-  preferences: {
-    contentType: string[]
-    genres: string[]
-  }
   roomId?: string
   userName?: string
   user?: User | null
@@ -33,8 +30,9 @@ interface SwipingInterfaceProps {
 
 export function SwipingInterface(props: SwipingInterfaceProps) {
   const cardRef = useRef<HTMLDivElement>(null)
+  const [preferences, setPreferences] = usePreferences()
 
-  const { preferences, roomId, userName, user } = props
+  const { roomId, userName, user } = props
 
   const [movies, setMovies] = useState<Movie[]>([])
   const [currentIndex, setCurrentIndex] = useState<number>(0)
@@ -71,7 +69,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
 
         const genreIds = tmdbService.getGenreIds(preferences.genres)
 
-        if (preferences.contentType.includes("movie")) {
+        if (preferences.contentType.includes("movies")) {
           const movieResults =
             genreIds.length > 0
               ? await tmdbService.getMoviesByGenre(genreIds)
@@ -271,21 +269,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="space-y-4 text-center">
-          <Loader2 className="text-primary mx-auto size-8 animate-spin" />
-          <h2 className="font-heading text-xl font-bold">
-            Finding perfect matches...
-          </h2>
-          <p className="text-muted-foreground">
-            Loading personalized recommendations
-          </p>
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return null
 
   if (!currentMovie && !isLoading) {
     return (
@@ -297,7 +281,16 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
           <p className="text-muted-foreground">
             Check back later for more movies and shows.
           </p>
-          <Button onClick={() => setCurrentIndex(0)} variant="outline">
+          <Button
+            onClick={() => {
+              setCurrentIndex(0)
+              setPreferences({
+                contentType: [],
+                genres: [],
+              })
+            }}
+            variant="outline"
+          >
             Start Over
           </Button>
         </div>
@@ -343,9 +336,9 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             <CardContent className="p-4 text-center">
               <div className="text-primary flex items-center justify-center gap-2">
                 <Heart className="size-5 fill-current" />
-                <span className="font-semibold">It&&apos;s a Match!</span>
+                <span className="font-semibold">It&apos;s a Match!</span>
               </div>
-              <p className="text-primary/80 text-sm">
+              <p className="text-primary/80 text-sm text-balance">
                 You and your friends both love this {currentMovie?.type}!
               </p>
             </CardContent>
