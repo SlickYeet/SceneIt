@@ -3,7 +3,6 @@
 import {
   Calendar,
   Clock,
-  Dot,
   Heart,
   Info,
   Loader2,
@@ -12,7 +11,7 @@ import {
   X,
 } from "lucide-react"
 import Image from "next/image"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -102,61 +101,62 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
 
   const currentMovie = movies[currentIndex]
 
-  function handleSwipe(direction: "left" | "right") {
-    if (isAnimating || !currentMovie) return
+  const handleSwipe = useCallback(
+    (direction: "left" | "right") => {
+      if (isAnimating || !currentMovie) return
 
-    setSwipeDirection(direction)
-    setIsAnimating(true)
+      setSwipeDirection(direction)
+      setIsAnimating(true)
 
-    if (direction === "right") {
-      setLikedMovies((prev) => [...prev, currentMovie.id])
+      if (direction === "right") {
+        setLikedMovies((prev) => [...prev, currentMovie.id])
 
-      if (user) {
-        // add liked movie to user's liked movies
-      }
+        if (user) {
+          // add liked movie to user's liked movies
+        }
 
-      if (roomId && userName) {
-        const matches = matchingService.addLikedMovie(userId, currentMovie.id)
-        if (matches.length > 0) {
-          setNewMatches((prev) => [...prev, ...matches.map((m) => m.movieId)])
-          setTimeout(() => {
-            setNewMatches((prev) => prev.filter((id) => id !== currentMovie.id))
-          }, 5000)
+        if (roomId && userName) {
+          const matches = matchingService.addLikedMovie(userId, currentMovie.id)
+          if (matches.length > 0) {
+            setNewMatches((prev) => [...prev, ...matches.map((m) => m.movieId)])
+            setTimeout(() => {
+              setNewMatches((prev) =>
+                prev.filter((id) => id !== currentMovie.id),
+              )
+            }, 5000)
+          }
         }
       }
-    }
-
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % movies.length)
-      setSwipeDirection(null)
-      setIsNewCard(true)
-      setShowDetails(false)
-      setDragOffset({ x: 0, y: 0 })
 
       setTimeout(() => {
-        setIsNewCard(false)
-        setIsAnimating(false)
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+        setSwipeDirection(null)
+        setIsNewCard(true)
+        setShowDetails(false)
+        setDragOffset({ x: 0, y: 0 })
+
+        setTimeout(() => {
+          setIsNewCard(false)
+          setIsAnimating(false)
+        }, 300)
       }, 300)
-    }, 300)
-  }
+    },
+    [isAnimating, currentMovie, user, roomId, userName, userId, movies.length],
+  )
 
-  function handleStart(clientX: number, clientY: number) {
-    if (isAnimating) return
-    setIsDragging(true)
-    setDragStart({ x: clientX, y: clientY })
-    setDragOffset({ x: 0, y: 0 })
-  }
+  const handleMove = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!isDragging || isAnimating) return
 
-  function handleMove(clientX: number, clientY: number) {
-    if (!isDragging || isAnimating) return
+      const deltaX = clientX - dragStart.x
+      const deltaY = clientY - dragStart.y
 
-    const deltaX = clientX - dragStart.x
-    const deltaY = clientY - dragStart.y
+      setDragOffset({ x: deltaX, y: deltaY })
+    },
+    [isDragging, isAnimating, dragStart],
+  )
 
-    setDragOffset({ x: deltaX, y: deltaY })
-  }
-
-  function handleEnd() {
+  const handleEnd = useCallback(() => {
     if (!isDragging || isAnimating) return
 
     setIsDragging(false)
@@ -170,6 +170,13 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     } else {
       setDragOffset({ x: 0, y: 0 })
     }
+  }, [isDragging, isAnimating, dragOffset, handleSwipe])
+
+  function handleStart(clientX: number, clientY: number) {
+    if (isAnimating) return
+    setIsDragging(true)
+    setDragStart({ x: clientX, y: clientY })
+    setDragOffset({ x: 0, y: 0 })
   }
 
   function handleMouseDown(e: React.MouseEvent) {
@@ -185,10 +192,6 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   function handleTouchMove(e: React.TouchEvent) {
     const touch = e.touches[0]
     handleMove(touch.clientX, touch.clientY)
-  }
-
-  function handleTouchEnd() {
-    handleEnd()
   }
 
   useEffect(() => {
@@ -355,7 +358,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            onTouchEnd={handleEnd}
             style={getCardStyle()}
             className={cn(
               "absolute inset-0 cursor-grab overflow-hidden py-0 transition-all duration-200 select-none",
