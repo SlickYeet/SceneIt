@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { env } from "@/env"
 import { useRoom } from "@/hooks/use-room"
 
 export function RoomSetup() {
@@ -23,7 +22,9 @@ export function RoomSetup() {
   const [error, setError] = useState<string>("")
 
   useEffect(() => {
-    const ws = new WebSocket(env.NEXT_PUBLIC_WS_URL)
+    const ws = new WebSocket(
+      `${window.location.origin.replace(/^http/, "ws")}/ws`,
+    )
     wsRef.current = ws
 
     ws.addEventListener("message", (ev) => {

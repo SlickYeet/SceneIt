@@ -8,7 +8,6 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { env } from "@/env"
 import { usePreferences } from "@/hooks/use-preferences"
 import { tmdbService, type Movie } from "@/lib/tmdb"
 import { cn } from "@/lib/utils"
@@ -229,8 +228,9 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   useEffect(() => {
     if (!roomId) return
 
-    const wsUrl = env.NEXT_PUBLIC_WS_URL
-    const ws = new WebSocket(wsUrl)
+    const ws = new WebSocket(
+      `${window.location.origin.replace(/^http/, "ws")}/ws`,
+    )
     wsRef.current = ws
 
     ws.addEventListener("open", () => {
