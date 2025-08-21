@@ -345,7 +345,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   return (
     <div className="min-h-screen overflow-hidden p-4">
       <div className="mx-auto max-w-sm space-y-4 py-4">
-        <div className="flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="font-heading text-xl font-bold">SceneIt</h1>
             {roomId && (
@@ -375,21 +375,61 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
               <X className="text-primary size-3" />
             </button>
 
-            <CardContent className="p-4 text-center">
+            <CardContent className="text-center">
               <div className="text-primary flex items-center justify-center gap-2">
                 <Heart className="size-5 fill-current" />
                 <span className="font-semibold">It&apos;s a Match!</span>
               </div>
               <p className="text-primary/80 mt-1 text-sm text-balance">
-                You and your friends both love{" "}
+                You and your friends both love this{" "}
                 {(() => {
                   const movieData =
                     activeMatchNotification.movieData ||
                     movies.find((m) => m.id === activeMatchNotification.movieId)
-                  return movieData?.title || "this " + movieData?.type
+                  return movieData?.type
                 })()}
-                !
+                :
               </p>
+
+              <div className="text-primary/80 mt-4">
+                {(() => {
+                  const movieData =
+                    activeMatchNotification.movieData ||
+                    movies.find((m) => m.id === activeMatchNotification.movieId)
+
+                  const typeLabel =
+                    movieData?.type === "tv"
+                      ? "TV show"
+                      : movieData?.type === "movie"
+                        ? "Movie"
+                        : "Unknown"
+
+                  if (movieData) {
+                    return (
+                      <span className="ml-2 inline-flex items-center gap-3">
+                        <span className="relative h-20 w-14 flex-shrink-0 overflow-hidden rounded-sm">
+                          <Image
+                            src={movieData.poster}
+                            alt={movieData.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </span>
+                        <span className="text-left">
+                          <span className="block font-semibold">
+                            {movieData.title}
+                          </span>
+                          <span className="text-primary/80 block text-xs">
+                            {movieData.year} • {typeLabel}
+                          </span>
+                        </span>
+                      </span>
+                    )
+                  }
+
+                  return "Unknown Movie or TV show"
+                })()}
+              </div>
             </CardContent>
           </Card>
         )}
