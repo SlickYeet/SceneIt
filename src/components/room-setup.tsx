@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { env } from "@/env"
 import { useRoom } from "@/hooks/use-room"
 
 export function RoomSetup() {
@@ -21,11 +22,8 @@ export function RoomSetup() {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>("")
 
-  // Connect to WebSocket when component mounts
   useEffect(() => {
-    const wsUrl =
-      process.env.NEXT_PUBLIC_WS_URL || `ws://${window.location.hostname}:4000`
-    const ws = new WebSocket(wsUrl)
+    const ws = new WebSocket(env.NEXT_PUBLIC_WS_URL)
     wsRef.current = ws
 
     ws.addEventListener("message", (ev) => {
