@@ -339,7 +339,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   return (
     <div className="min-h-screen overflow-hidden p-4">
       <div className="mx-auto max-w-sm space-y-4 py-4">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="font-heading text-xl font-bold">SceneIt</h1>
             {roomId && (
@@ -517,7 +517,6 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
                 </div>
               )}
 
-              {/* Show drag indicators while dragging */}
               {isDragging && dragOffset.x < -50 && (
                 <div className="bg-destructive/20 absolute inset-0 flex items-center justify-center">
                   <div className="bg-destructive animate-pulse rounded-full p-4">
@@ -542,18 +541,18 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             onClick={() => handleSwipe("left")}
             size="lg"
             variant="outline"
-            className="group size-14 rounded-full border-2 border-red-200 bg-white/80 p-0 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:border-red-300 hover:bg-red-50"
+            className="hover:border-destructive/50! hover:bg-destructive/10! size-14 rounded-full border-2"
           >
-            <X className="size-6 text-red-500 transition-colors group-hover:text-red-600" />
+            <X className="text-destructive size-6" />
           </Button>
 
           <Button
             onClick={() => setShowDetails(!showDetails)}
             size="lg"
             variant="outline"
-            className="group size-12 rounded-full border-2 border-blue-200 bg-white/80 p-0 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:border-blue-300 hover:bg-blue-50"
+            className="size-12 rounded-full border-2 hover:border-sky-500/50! hover:bg-sky-500/10!"
           >
-            <Info className="size-5 text-blue-500 transition-colors group-hover:text-blue-600" />
+            <Info className="size-5 text-sky-500" />
           </Button>
 
           <Button
@@ -561,9 +560,9 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             onClick={() => handleSwipe("right")}
             size="lg"
             variant="outline"
-            className="hover:border-primary/50! hover:bg-primary/10! size-14 rounded-full border-2 p-0"
+            className="hover:border-primary/50! hover:bg-primary/10! size-14 rounded-full border-2"
           >
-            <Heart className="size-6 text-emerald-500 transition-colors group-hover:text-emerald-600" />
+            <Heart className="text-primary size-6" />
           </Button>
         </div>
 

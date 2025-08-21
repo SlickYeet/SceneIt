@@ -16,9 +16,9 @@
     "dev:ws": "tsx watch src/server/ws.ts",
     "postinstall": "prisma generate",
     "lint": "next lint",
-    "start": "concurrently \"next start\" \"node dist/server/ws.js\"",
+    "start": "concurrently --kill-others-on-fail \"npm run start:app\" \"npm run start:ws\"",
     "start:app": "next start",
-    "start:ws": "tsx src/server/ws.ts",
+    "start:ws": "node dist/server/ws.js",
     "shadcn": "pnpm dlx shadcn@latest"
   },
   "dependencies": {
