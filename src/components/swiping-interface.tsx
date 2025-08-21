@@ -38,6 +38,9 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [likedMovies, setLikedMovies] = useState<number[]>([])
   const [newMatches, setNewMatches] = useState<number[]>([])
+  const [activeMatchNotification, setActiveMatchNotification] = useState<
+    number | null
+  >(null)
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({
     x: 0,
@@ -128,6 +131,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
         setIsNewCard(true)
         setShowDetails(false)
         setDragOffset({ x: 0, y: 0 })
+        setActiveMatchNotification(null) // Dismiss match notification on swipe
 
         setTimeout(() => {
           setIsNewCard(false)
@@ -251,6 +255,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
         const msg = JSON.parse(ev.data)
         if (msg.type === "match" && msg.roomId === roomId) {
           setNewMatches((prev) => [...prev, msg.match.movieId])
+          setActiveMatchNotification(msg.match.movieId)
         }
       } catch (error) {
         console.error("Malformed WS message", error)
@@ -365,9 +370,12 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
           </div>
         )}
 
-        {newMatches.includes(currentMovie.id) && (
+        {activeMatchNotification && (
           <Card className="animate-in fade-in-0 slide-in-from-top-1 border-primary/25 bg-primary/10 relative duration-300">
-            <button className="bg-primary/20 hover:bg-primary/20 border-primary/25 absolute -top-2 -right-2 rounded-full border p-1 transition-colors">
+            <button
+              onClick={() => setActiveMatchNotification(null)}
+              className="bg-primary/20 hover:bg-primary/30 border-primary/25 absolute -top-2 -right-2 rounded-full border p-1 transition-colors"
+            >
               <X className="text-primary size-3" />
             </button>
 
@@ -377,7 +385,10 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
                 <span className="font-semibold">It&apos;s a Match!</span>
               </div>
               <p className="text-primary/80 mt-1 text-sm text-balance">
-                You and your friends both love this {currentMovie?.type}!
+                You and your friends both love this{" "}
+                {movies.find((m) => m.id === activeMatchNotification)?.type ||
+                  "content"}
+                !
               </p>
             </CardContent>
           </Card>
