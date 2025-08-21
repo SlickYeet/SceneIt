@@ -5,21 +5,20 @@ import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { usePreferences } from "@/hooks/use-preferences"
+import { usePreferences, type Preferences } from "@/hooks/use-preferences"
 
 interface PreferencesSetupProps {
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>
 }
 
 export function PreferencesSetup({ setCurrentStep }: PreferencesSetupProps) {
-  const [preferences, setPreferences] = usePreferences()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_, setPreferences] = usePreferences()
 
   const [selectedContentType, setSelectedContentType] = useState<
-    typeof preferences.contentType
+    Preferences["contentType"]
   >([])
-  const [selectedGenre, setSelectedGenre] = useState<typeof preferences.genres>(
-    [],
-  )
+  const [selectedGenre, setSelectedGenre] = useState<Preferences["genres"]>([])
 
   const CONTENT_TYPES = [
     { id: "movies", label: "Movies", icon: <Film className="size-5" /> },
@@ -41,13 +40,13 @@ export function PreferencesSetup({ setCurrentStep }: PreferencesSetupProps) {
     "Adventure",
   ]
 
-  function toggleContentType(type: (typeof preferences.contentType)[number]) {
+  function toggleContentType(type: Preferences["contentType"][number]) {
     setSelectedContentType((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     )
   }
 
-  function toggleGenre(genre: (typeof preferences.genres)[number]) {
+  function toggleGenre(genre: Preferences["genres"][number]) {
     setSelectedGenre((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre],
     )
@@ -65,7 +64,7 @@ export function PreferencesSetup({ setCurrentStep }: PreferencesSetupProps) {
   }
 
   function handleSkip() {
-    const defaultPreferences: typeof preferences = {
+    const defaultPreferences: Preferences = {
       contentType: ["movies", "tv"],
       genres: ["Action", "Comedy", "Drama"],
     }
@@ -97,12 +96,12 @@ export function PreferencesSetup({ setCurrentStep }: PreferencesSetupProps) {
                     key={type.id}
                     onClick={() =>
                       toggleContentType(
-                        type.id as (typeof preferences.contentType)[number],
+                        type.id as Preferences["contentType"][number],
                       )
                     }
                     variant={
                       selectedContentType.includes(
-                        type.id as (typeof preferences.contentType)[number],
+                        type.id as Preferences["contentType"][number],
                       )
                         ? "default"
                         : "outline"

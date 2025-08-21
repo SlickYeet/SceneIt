@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useRoom } from "@/hooks/use-room"
 
 export function RoomSetup() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, setRoom] = useRoom()
   const wsRef = useRef<WebSocket | null>(null)
 

@@ -52,12 +52,6 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     y: 0,
   })
 
-  const [userId] = useState(
-    () =>
-      user?.id ||
-      `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-  )
-
   useEffect(() => {
     async function fetchMovies() {
       setIsLoading(true)
@@ -139,7 +133,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
         }, 300)
       }, 300)
     },
-    [isAnimating, currentMovie, user, roomId, userName, userId, movies.length],
+    [isAnimating, currentMovie, user, roomId, userName, movies.length],
   )
 
   const handleMove = useCallback(
@@ -274,7 +268,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
       ws.close()
       wsRef.current = null
     }
-  }, [roomId, user?.id, userName])
+  }, [roomId, user?.id, user?.name, userName])
 
   function getCardStyle() {
     if (swipeDirection === "left") {
