@@ -1,24 +1,15 @@
 "use client"
 
-import {
-  Calendar,
-  Clock,
-  Heart,
-  Info,
-  Loader2,
-  Star,
-  Users,
-  X,
-} from "lucide-react"
+import { Calendar, Clock, Heart, Info, Star, Users, X } from "lucide-react"
 import Image from "next/image"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { env } from "@/env"
 import { usePreferences } from "@/hooks/use-preferences"
-import { matchingService } from "@/lib/matching"
 import { tmdbService, type Movie } from "@/lib/tmdb"
 import { cn } from "@/lib/utils"
 import type { User } from "@/type"
@@ -33,13 +24,9 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const [preferences, setPreferences] = usePreferences()
-  const [wsConnectionStatus, setWsConnectionStatus] = useState<number | null>(
-    null,
-  )
 
   const { roomId, userName, user } = props
 
-  const [incomingMatch, setIncomingMatch] = useState<any | null>(null)
   const [movies, setMovies] = useState<Movie[]>([])
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const [showDetails, setShowDetails] = useState<boolean>(false)
@@ -64,7 +51,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   const [userId] = useState(
     () =>
       user?.id ||
-      `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
   )
 
   useEffect(() => {
@@ -119,16 +106,19 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
           // add liked movie to user's liked movies
         }
 
-        if (roomId && userName) {
-          const matches = matchingService.addLikedMovie(userId, currentMovie.id)
-          if (matches.length > 0) {
-            setNewMatches((prev) => [...prev, ...matches.map((m) => m.movieId)])
-            setTimeout(() => {
-              setNewMatches((prev) =>
-                prev.filter((id) => id !== currentMovie.id),
-              )
-            }, 5000)
-          }
+        if (
+          roomId &&
+          (userName || user?.name) &&
+          wsRef.current?.readyState === WebSocket.OPEN
+        ) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "likedMovie",
+              movieId: currentMovie.id,
+              userId: user?.id ?? userName ?? "anon",
+              roomId: roomId,
+            }),
+          )
         }
       }
 
@@ -245,11 +235,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
-    // Set initial connecting status
-    setWsConnectionStatus(WebSocket.CONNECTING)
-
     ws.addEventListener("open", () => {
-      setWsConnectionStatus(WebSocket.OPEN)
       ws.send(
         JSON.stringify({
           type: "join",
@@ -260,28 +246,17 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
       )
     })
 
-    ws.addEventListener("close", () => {
-      setWsConnectionStatus(WebSocket.CLOSED)
-    })
-
-    ws.addEventListener("error", () => {
-      setWsConnectionStatus(WebSocket.CLOSED)
-    })
-
     ws.addEventListener("message", (ev) => {
       try {
         const msg = JSON.parse(ev.data)
         if (msg.type === "match" && msg.roomId === roomId) {
-          setIncomingMatch(msg.match)
           setNewMatches((prev) => [...prev, msg.match.movieId])
         }
-        // TODO: show toast
       } catch (error) {
         console.error("Malformed WS message", error)
       }
     })
     return () => {
-      setWsConnectionStatus(null)
       ws.close()
       wsRef.current = null
     }
@@ -357,20 +332,24 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     <div className="min-h-screen overflow-hidden p-4">
       <div className="mx-auto max-w-sm space-y-4 py-4">
         <div className="flex items-center justify-between">
-          <h1 className="font-heading text-xl font-bold">SceneIt</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <h1 className="font-heading text-xl font-bold">SceneIt</h1>
             {roomId && (
-              <div className="text-muted-foreground flex items-center gap-1 text-sm">
-                <Users className="size-4" />
-                <span>{roomId}</span>
-              </div>
+              <Badge
+                onClick={() => {
+                  navigator.clipboard.writeText(roomId)
+                  toast.success("Room ID copied to clipboard")
+                }}
+                className="bg-foreground hover:bg-foreground/80 text-background cursor-pointer rounded-full transition-colors"
+              >
+                <Users />
+                <span className="text-xs font-medium">{roomId}</span>
+              </Badge>
             )}
-            <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <span>{currentIndex + 1}</span>
-              <span>/</span>
-              <span>{movies.length}</span>
-            </div>
           </div>
+          <Badge className="bg-foreground hover:bg-foreground/80 text-background cursor-pointer rounded-full text-xs transition-colors">
+            {currentIndex + 1} / {movies.length}
+          </Badge>
         </div>
 
         {user && (
@@ -386,65 +365,20 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
           </div>
         )}
 
-        {/* WebSocket connection status */}
-        {roomId && (
-          <div className="text-center">
-            {wsConnectionStatus === WebSocket.CONNECTING && (
-              <Badge variant="secondary" className="text-xs">
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                Connecting to room...
-              </Badge>
-            )}
-            {wsConnectionStatus === WebSocket.OPEN && (
-              <Badge className="text-xs">Connected to room {roomId}</Badge>
-            )}
-            {wsConnectionStatus === WebSocket.CLOSING && (
-              <Badge className="text-xs">Disconnecting...</Badge>
-            )}
-            {wsConnectionStatus === WebSocket.CLOSED && (
-              <Badge variant="destructive" className="text-xs">
-                Disconnected - Retry refreshing
-              </Badge>
-            )}
-          </div>
-        )}
+        {newMatches.includes(currentMovie.id) && (
+          <Card className="animate-in fade-in-0 slide-in-from-top-1 border-primary/25 bg-primary/10 relative duration-300">
+            <button className="bg-primary/20 hover:bg-primary/20 border-primary/25 absolute -top-2 -right-2 rounded-full border p-1 transition-colors">
+              <X className="text-primary size-3" />
+            </button>
 
-        {newMatches.includes(currentMovie?.id) && (
-          <Card className="bg-primary/10 border-primary/25">
             <CardContent className="p-4 text-center">
               <div className="text-primary flex items-center justify-center gap-2">
                 <Heart className="size-5 fill-current" />
                 <span className="font-semibold">It&apos;s a Match!</span>
               </div>
-              <p className="text-primary/80 text-sm text-balance">
+              <p className="text-primary/80 mt-1 text-sm text-balance">
                 You and your friends both love this {currentMovie?.type}!
               </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {incomingMatch && (
-          <Card className="border-green-500/25 bg-green-500/10">
-            <CardContent className="p-4 text-center">
-              <div className="mb-2 flex items-center justify-center gap-2 text-green-600">
-                <Heart className="size-5 fill-current" />
-                <span className="font-semibold">New Match!</span>
-              </div>
-              <p className="mb-3 text-sm text-balance text-green-600/80">
-                You and{" "}
-                {incomingMatch.users
-                  .filter((u: string) => u !== (user?.id ?? userName ?? "anon"))
-                  .join(", ")}{" "}
-                both liked the same movie!
-              </p>
-              <Button
-                onClick={() => setIncomingMatch(null)}
-                size="sm"
-                variant="outline"
-                className="border-green-500/30"
-              >
-                Awesome!
-              </Button>
             </CardContent>
           </Card>
         )}
@@ -563,18 +497,18 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             onClick={() => handleSwipe("left")}
             size="lg"
             variant="outline"
-            className="hover:border-destructive/50! hover:bg-destructive/10! size-14 rounded-full border-2 bg-transparent p-0"
+            className="group size-14 rounded-full border-2 border-red-200 bg-white/80 p-0 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:border-red-300 hover:bg-red-50"
           >
-            <X className="text-destructive size-6" />
+            <X className="size-6 text-red-500 transition-colors group-hover:text-red-600" />
           </Button>
 
           <Button
             onClick={() => setShowDetails(!showDetails)}
             size="lg"
             variant="outline"
-            className="size-12 rounded-full border-2 bg-transparent p-0"
+            className="group size-12 rounded-full border-2 border-blue-200 bg-white/80 p-0 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:border-blue-300 hover:bg-blue-50"
           >
-            <Info className="size-5" />
+            <Info className="size-5 text-blue-500 transition-colors group-hover:text-blue-600" />
           </Button>
 
           <Button
@@ -584,7 +518,7 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
             variant="outline"
             className="hover:border-primary/50! hover:bg-primary/10! size-14 rounded-full border-2 p-0"
           >
-            <Heart className="text-primary size-6" />
+            <Heart className="size-6 text-emerald-500 transition-colors group-hover:text-emerald-600" />
           </Button>
         </div>
 

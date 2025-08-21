@@ -75,7 +75,6 @@ wss.on("connection", (ws) => {
         const matches = matchingService.addLikedMovie(msg.userId, msg.movieId)
         if (matches.length > 0) {
           console.log(`Found ${matches.length} new matches!`)
-          // The match listener will handle broadcasting
         }
       }
 
@@ -85,12 +84,11 @@ wss.on("connection", (ws) => {
         meta.userName = msg.userName || msg.userId
         clients.set(ws, meta)
 
-        // Try to join the room in the matching service
         const joined = matchingService.joinRoom(
           msg.roomId,
           msg.userId,
           meta.userName || msg.userId || "anonymous",
-          { contentType: [], genres: [] }, // default preferences
+          { contentType: [], genres: [] },
         )
 
         if (joined) {

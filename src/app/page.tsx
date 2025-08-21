@@ -14,8 +14,8 @@ export default function HomePage() {
 
   const [isHydrated, setIsHydrated] = useState(false)
 
-  const user = {
-    id: "user-123",
+  const [user] = useState(() => ({
+    id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     name: "John Doe",
     email: "john.doe@example.com",
     emailVerified: true,
@@ -23,7 +23,7 @@ export default function HomePage() {
     createdAt: new Date(),
     updatedAt: new Date(),
     isGuest: true,
-  }
+  }))
 
   useEffect(() => {
     setIsHydrated(true)
