@@ -38,9 +38,10 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [likedMovies, setLikedMovies] = useState<number[]>([])
   const [newMatches, setNewMatches] = useState<number[]>([])
-  const [activeMatchNotification, setActiveMatchNotification] = useState<
-    number | null
-  >(null)
+  const [activeMatchNotification, setActiveMatchNotification] = useState<{
+    movieId: number
+    movieData?: Movie
+  } | null>(null)
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({
     x: 0,
@@ -131,7 +132,6 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
         setIsNewCard(true)
         setShowDetails(false)
         setDragOffset({ x: 0, y: 0 })
-        setActiveMatchNotification(null) // Dismiss match notification on swipe
 
         setTimeout(() => {
           setIsNewCard(false)
@@ -255,7 +255,16 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
         const msg = JSON.parse(ev.data)
         if (msg.type === "match" && msg.roomId === roomId) {
           setNewMatches((prev) => [...prev, msg.match.movieId])
-          setActiveMatchNotification(msg.match.movieId)
+          setMovies((currentMovies) => {
+            const matchedMovie = currentMovies.find(
+              (m) => m.id === msg.match.movieId,
+            )
+            setActiveMatchNotification({
+              movieId: msg.match.movieId,
+              movieData: matchedMovie,
+            })
+            return currentMovies
+          })
         }
       } catch (error) {
         console.error("Malformed WS message", error)
@@ -357,19 +366,6 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
           </Badge>
         </div>
 
-        {user && (
-          <div className="text-center">
-            <Badge
-              variant={user.isGuest ? "secondary" : "default"}
-              className="text-xs"
-            >
-              {user.isGuest
-                ? `Guest: ${user.name}`
-                : `Signed in as ${user.name}`}
-            </Badge>
-          </div>
-        )}
-
         {activeMatchNotification && (
           <Card className="animate-in fade-in-0 slide-in-from-top-1 border-primary/25 bg-primary/10 relative duration-300">
             <button
@@ -385,9 +381,13 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
                 <span className="font-semibold">It&apos;s a Match!</span>
               </div>
               <p className="text-primary/80 mt-1 text-sm text-balance">
-                You and your friends both love this{" "}
-                {movies.find((m) => m.id === activeMatchNotification)?.type ||
-                  "content"}
+                You and your friends both love{" "}
+                {(() => {
+                  const movieData =
+                    activeMatchNotification.movieData ||
+                    movies.find((m) => m.id === activeMatchNotification.movieId)
+                  return movieData?.title || "this " + movieData?.type
+                })()}
                 !
               </p>
             </CardContent>
