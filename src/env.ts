@@ -15,6 +15,7 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_URL: z.string().url(),
     NEXT_PUBLIC_TMDB_API_KEY: z.string(),
+    NEXT_PUBLIC_WS_URL: z.string().url(),
   },
 
   runtimeEnv: {
@@ -25,6 +26,7 @@ export const env = createEnv({
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
     NEXT_PUBLIC_TMDB_API_KEY: process.env.NEXT_PUBLIC_TMDB_API_KEY,
+    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

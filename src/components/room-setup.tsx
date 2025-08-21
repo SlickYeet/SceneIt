@@ -1,7 +1,7 @@
 "use client"
 
 import { LogIn, Plus } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,31 +11,107 @@ import { useRoom } from "@/hooks/use-room"
 
 export function RoomSetup() {
   const [_, setRoom] = useRoom()
+  const wsRef = useRef<WebSocket | null>(null)
 
   const [userName, setUserName] = useState<string>("")
   const [roomCode, setRoomCode] = useState<string>("")
   const [roomName, setRoomName] = useState<string>("")
   const [mode, setMode] = useState<"create" | "join" | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string>("")
+
+  // Connect to WebSocket when component mounts
+  useEffect(() => {
+    const wsUrl =
+      process.env.NEXT_PUBLIC_WS_URL || `ws://${window.location.hostname}:4000`
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    ws.addEventListener("message", (ev) => {
+      try {
+        const msg = JSON.parse(ev.data)
+
+        if (msg.type === "roomCreated") {
+          setIsLoading(false)
+          if (msg.success) {
+            setRoom({
+              id: msg.room.id,
+              name: msg.room.name,
+              code: msg.room.code,
+              userName: [userName.trim()],
+            })
+          } else {
+            setError(msg.error || "Failed to create room")
+          }
+        }
+
+        if (msg.type === "roomChecked") {
+          setIsLoading(false)
+          if (msg.success) {
+            setRoom({
+              id: msg.room.id,
+              name: msg.room.name,
+              code: msg.room.code,
+              userName: [userName.trim()],
+            })
+          } else {
+            setError("Room not found. Please check the room code.")
+          }
+        }
+      } catch (error) {
+        console.error("WS message error:", error)
+        setIsLoading(false)
+        setError("Connection error occurred")
+      }
+    })
+
+    ws.addEventListener("error", () => {
+      setIsLoading(false)
+      setError("Could not connect to server")
+    })
+
+    return () => {
+      ws.close()
+      wsRef.current = null
+    }
+  }, [userName, setRoom])
 
   function handleCreateRoom() {
     if (!userName.trim() || !roomName.trim()) return
-    const newRoomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-    setRoom({
-      id: newRoomCode,
-      name: roomName.trim(),
-      code: newRoomCode,
-      userName: [userName.trim()],
-    })
+
+    setIsLoading(true)
+    setError("")
+
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "createRoom",
+          roomName: roomName.trim(),
+        }),
+      )
+    } else {
+      setIsLoading(false)
+      setError("Not connected to server")
+    }
   }
 
   function handleJoinRoom() {
     if (!userName.trim() || !roomCode.trim()) return
-    setRoom({
-      id: roomCode.trim().toUpperCase(),
-      name: `Room ${roomCode.trim().toUpperCase()}`,
-      code: roomCode.trim().toUpperCase(),
-      userName: [userName.trim()],
-    })
+
+    setIsLoading(true)
+    setError("")
+
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "checkRoom",
+          roomCode: roomCode.trim().toUpperCase(),
+        }),
+      )
+    } else {
+      setIsLoading(false)
+      setError("Not connected to server")
+    }
   }
 
   if (!mode) {
@@ -94,6 +170,12 @@ export function RoomSetup() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {error && (
+            <div className="text-destructive bg-destructive/10 border-destructive/20 rounded-md border p-3 text-sm">
+              {error}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="userName">Your Name</Label>
             <Input
@@ -101,6 +183,7 @@ export function RoomSetup() {
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               placeholder="Enter your name"
+              disabled={isLoading}
             />
           </div>
 
@@ -112,6 +195,7 @@ export function RoomSetup() {
                 placeholder="Movie Night, Date Night, etc."
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
+                disabled={isLoading}
               />
             </div>
           ) : (
@@ -123,27 +207,33 @@ export function RoomSetup() {
                 value={roomCode}
                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                 maxLength={6}
+                disabled={isLoading}
               />
             </div>
           )}
 
           <div className="flex gap-2 pt-4">
             <Button
-              onClick={() => setMode(null)}
+              onClick={() => {
+                setMode(null)
+                setError("")
+              }}
               variant="outline"
               className="flex-1"
+              disabled={isLoading}
             >
               Back
             </Button>
             <Button
               disabled={
+                isLoading ||
                 !userName.trim() ||
                 (mode === "create" ? !roomName.trim() : !roomCode.trim())
               }
               onClick={mode === "create" ? handleCreateRoom : handleJoinRoom}
               className="flex-1"
             >
-              {mode === "create" ? "Create" : "Join"}
+              {isLoading ? "..." : mode === "create" ? "Create" : "Join"}
             </Button>
           </div>
         </CardContent>

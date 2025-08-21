@@ -1,3 +1,4 @@
+import { Provider as JotaiProvider } from "jotai"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
@@ -32,7 +33,9 @@ export default function RootLayout({
         className={cn("antialiased", geistSans.variable, geistMono.variable)}
       >
         <ThemeProvider>
-          <main>{children}</main>
+          <JotaiProvider>
+            <main>{children}</main>
+          </JotaiProvider>
         </ThemeProvider>
       </body>
     </html>

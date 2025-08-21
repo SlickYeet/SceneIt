@@ -27,6 +27,25 @@ class MatchingService {
   private rooms: Map<string, Room> = new Map()
   private userSession: Map<string, UserSession> = new Map()
 
+  private onMatchCallbacks: Set<(roomId: string, match: Match) => void> =
+    new Set()
+
+  addOnMatchListener(cb: (roomId: string, match: Match) => void) {
+    this.onMatchCallbacks.add(cb)
+    return () => this.onMatchCallbacks.delete(cb)
+  }
+
+  private emitMatch(roomId: string, match: Match) {
+    for (const cb of this.onMatchCallbacks) {
+      try {
+        cb(roomId, match)
+      } catch (e) {
+        // swallow listener errors
+        console.error("Error in onMatch listener:", e)
+      }
+    }
+  }
+
   generateRoomCode(): string {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     let result = ""
@@ -74,8 +93,8 @@ class MatchingService {
           (m) =>
             m.movieId === movieId &&
             m.users.length === usersWhoLikedMovie.length &&
-            m.users.every((userId) =>
-              usersWhoLikedMovie.some((u) => u.id === userId),
+            m.users.every((uid) =>
+              usersWhoLikedMovie.some((u) => u.id === uid),
             ),
         )
 
@@ -87,6 +106,7 @@ class MatchingService {
           }
           room.matches.push(match)
           newMatches.push(match)
+          this.emitMatch(room.id, match)
         }
       }
     })
@@ -124,6 +144,37 @@ class MatchingService {
     }
 
     return true
+  }
+
+  joinRoom(
+    roomId: string,
+    userId: string,
+    userName: string,
+    preferences: Preferences,
+  ): boolean {
+    const room = this.rooms.get(roomId)
+    if (!room || !room.isActive) return false
+
+    // Check if user is already in the room
+    if (room.users.some((u) => u.id === userId)) return true
+
+    // Add user to room
+    const userSession: UserSession = {
+      id: userId,
+      name: userName,
+      likedMovies: [],
+      preferences,
+      createdAt: new Date(),
+    }
+
+    room.users.push(userSession)
+    this.userSession.set(userId, userSession)
+
+    return true
+  }
+
+  getRoom(roomId: string): Room | undefined {
+    return this.rooms.get(roomId)
   }
 
   cleanupOldRooms(maxAgeHours = 24): void {

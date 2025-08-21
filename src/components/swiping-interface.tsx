@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { env } from "@/env"
 import { usePreferences } from "@/hooks/use-preferences"
 import { matchingService } from "@/lib/matching"
 import { tmdbService, type Movie } from "@/lib/tmdb"
@@ -30,10 +31,15 @@ interface SwipingInterfaceProps {
 
 export function SwipingInterface(props: SwipingInterfaceProps) {
   const cardRef = useRef<HTMLDivElement>(null)
+  const wsRef = useRef<WebSocket | null>(null)
   const [preferences, setPreferences] = usePreferences()
+  const [wsConnectionStatus, setWsConnectionStatus] = useState<number | null>(
+    null,
+  )
 
   const { roomId, userName, user } = props
 
+  const [incomingMatch, setIncomingMatch] = useState<any | null>(null)
   const [movies, setMovies] = useState<Movie[]>([])
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const [showDetails, setShowDetails] = useState<boolean>(false)
@@ -232,6 +238,55 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [isAnimating, showDetails, handleSwipe])
 
+  useEffect(() => {
+    if (!roomId) return
+
+    const wsUrl = env.NEXT_PUBLIC_WS_URL
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    // Set initial connecting status
+    setWsConnectionStatus(WebSocket.CONNECTING)
+
+    ws.addEventListener("open", () => {
+      setWsConnectionStatus(WebSocket.OPEN)
+      ws.send(
+        JSON.stringify({
+          type: "join",
+          roomId,
+          userId: user?.id ?? userName ?? "anon",
+          userName: userName || user?.name || "anonymous",
+        }),
+      )
+    })
+
+    ws.addEventListener("close", () => {
+      setWsConnectionStatus(WebSocket.CLOSED)
+    })
+
+    ws.addEventListener("error", () => {
+      setWsConnectionStatus(WebSocket.CLOSED)
+    })
+
+    ws.addEventListener("message", (ev) => {
+      try {
+        const msg = JSON.parse(ev.data)
+        if (msg.type === "match" && msg.roomId === roomId) {
+          setIncomingMatch(msg.match)
+          setNewMatches((prev) => [...prev, msg.match.movieId])
+        }
+        // TODO: show toast
+      } catch (error) {
+        console.error("Malformed WS message", error)
+      }
+    })
+    return () => {
+      setWsConnectionStatus(null)
+      ws.close()
+      wsRef.current = null
+    }
+  }, [roomId, user?.id, userName])
+
   function getCardStyle() {
     if (swipeDirection === "left") {
       return {
@@ -331,6 +386,29 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
           </div>
         )}
 
+        {/* WebSocket connection status */}
+        {roomId && (
+          <div className="text-center">
+            {wsConnectionStatus === WebSocket.CONNECTING && (
+              <Badge variant="secondary" className="text-xs">
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Connecting to room...
+              </Badge>
+            )}
+            {wsConnectionStatus === WebSocket.OPEN && (
+              <Badge className="text-xs">Connected to room {roomId}</Badge>
+            )}
+            {wsConnectionStatus === WebSocket.CLOSING && (
+              <Badge className="text-xs">Disconnecting...</Badge>
+            )}
+            {wsConnectionStatus === WebSocket.CLOSED && (
+              <Badge variant="destructive" className="text-xs">
+                Disconnected - Retry refreshing
+              </Badge>
+            )}
+          </div>
+        )}
+
         {newMatches.includes(currentMovie?.id) && (
           <Card className="bg-primary/10 border-primary/25">
             <CardContent className="p-4 text-center">
@@ -341,6 +419,32 @@ export function SwipingInterface(props: SwipingInterfaceProps) {
               <p className="text-primary/80 text-sm text-balance">
                 You and your friends both love this {currentMovie?.type}!
               </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {incomingMatch && (
+          <Card className="border-green-500/25 bg-green-500/10">
+            <CardContent className="p-4 text-center">
+              <div className="mb-2 flex items-center justify-center gap-2 text-green-600">
+                <Heart className="size-5 fill-current" />
+                <span className="font-semibold">New Match!</span>
+              </div>
+              <p className="mb-3 text-sm text-balance text-green-600/80">
+                You and{" "}
+                {incomingMatch.users
+                  .filter((u: string) => u !== (user?.id ?? userName ?? "anon"))
+                  .join(", ")}{" "}
+                both liked the same movie!
+              </p>
+              <Button
+                onClick={() => setIncomingMatch(null)}
+                size="sm"
+                variant="outline"
+                className="border-green-500/30"
+              >
+                Awesome!
+              </Button>
             </CardContent>
           </Card>
         )}
